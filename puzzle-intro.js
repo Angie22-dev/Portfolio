@@ -1,6 +1,8 @@
 /*
- * Angelica Singleton — standalone puzzle-piece intro.
- * Approved opening overlay only; no edits to existing portfolio elements.
+ * ANGELICA SINGLETON — PUZZLE-PIECE FADE INTRO
+ * Overlay-only addition. It does not modify existing page content, layout,
+ * navigation, typography or links. Insert at start of <body>:
+ * <script src="puzzle-intro.js"></script>
  */
 (() => {
   'use strict';
@@ -9,15 +11,43 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let played = false;
   try { played = sessionStorage.getItem('angelicaPuzzlePlayed') === '1'; } catch (_) {}
+  // Nothing gets inserted for returning visitors or reduced-motion users.
   if (played || reducedMotion.matches) return;
 
   const style = document.createElement('style');
   style.id = 'angelica-puzzle-only-styles';
-  style.textContent = [
-    '#angelica-puzzle-overlay{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;z-index:2147483600!important;pointer-events:none!important}',
-    '#angelica-puzzle-skip{position:fixed!important;top:26px!important;right:clamp(18px,4vw,65px)!important;z-index:2147483601!important;display:block!important;background:#26192e!important;color:white!important;border:1px solid rgba(255,255,255,.65)!important;border-radius:100px!important;padding:11px 18px!important;font:700 12px Inter,Arial,sans-serif!important;letter-spacing:0!important;line-height:normal!important;cursor:pointer!important;box-sizing:border-box!important;text-transform:none!important}',
-    '#angelica-puzzle-skip:focus-visible{outline:3px solid #a76ac7!important;outline-offset:4px!important}'
-  ].join('\n');
+  style.textContent = `
+    #angelica-puzzle-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 2147483600 !important;
+      pointer-events: none !important;
+    }
+    #angelica-puzzle-skip {
+      position: fixed !important;
+      top: 26px !important;
+      right: clamp(18px, 4vw, 65px) !important;
+      z-index: 2147483601 !important;
+      display: block;
+      background: #26192e !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,.65) !important;
+      border-radius: 100px !important;
+      padding: 11px 18px !important;
+      font: 700 12px Inter, Arial, sans-serif !important;
+      letter-spacing: 0 !important;
+      line-height: normal !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+      text-transform: none !important;
+    }
+    #angelica-puzzle-skip:focus-visible {
+      outline: 3px solid #a76ac7 !important;
+      outline-offset: 4px !important;
+    }
+  `;
   document.head.appendChild(style);
 
   const canvas = document.createElement('canvas');
@@ -30,13 +60,18 @@
   skip.textContent = 'Skip intro ↗';
   skip.setAttribute('aria-label', 'Skip opening animation');
   document.body.prepend(canvas, skip);
+
   const ctx = canvas.getContext('2d');
-  if (!ctx) { canvas.remove(); skip.remove(); style.remove(); return; }
+  if (!ctx) {
+    canvas.remove(); skip.remove(); style.remove();
+    return;
+  }
 
   let pieces = [], w = 0, h = 0, startTime = null, raf = null, running = false;
   const DURATION_MS = 2020;
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const ease = p => p * p * (3 - 2 * p);
+  // Same deterministic fragment motion as the approved animation preview.
   const noise = n => {
     const v = Math.sin(n * 127.1 + 78.233) * 43758.5453;
     return v - Math.floor(v);
@@ -107,12 +142,12 @@
     ctx.textBaseline = 'alphabetic';
     const font = Math.min(116, (w - 35) / 9.8, h * .16);
     ctx.fillStyle = '#26192e';
-    ctx.font = '900 ' + font + 'px Inter, Arial Black, Arial, sans-serif';
+    ctx.font = `900 ${font}px Inter, Arial Black, Arial, sans-serif`;
     const midY = h * .48;
     ctx.fillText('ANGELICA', w / 2, midY);
     ctx.fillText('SINGLETON', w / 2, midY + font * 1.04);
     ctx.fillStyle = '#49385a';
-    ctx.font = '800 ' + Math.min(13, Math.max(9, w / 55)) + 'px Inter, Arial, sans-serif';
+    ctx.font = `800 ${Math.min(13, Math.max(9, w / 55))}px Inter, Arial, sans-serif`;
     ctx.fillText('DESIGN WITH CURIOSITY', w / 2, Math.min(h - 42, midY + font * 1.77));
   }
 
@@ -130,7 +165,7 @@
       ctx.rotate(piece.angle * motion);
       ctx.translate(-piece.cx, -piece.cy);
       ctx.save(); ctx.clip(piece.path); drawCover(); ctx.restore();
-      ctx.strokeStyle = 'rgba(40,27,54,' + (seamOpacity * .24).toFixed(3) + ')';
+      ctx.strokeStyle = `rgba(40,27,54,${(seamOpacity * .24).toFixed(3)})`;
       ctx.lineWidth = 1.15;
       ctx.stroke(piece.path);
       ctx.restore();
@@ -146,7 +181,7 @@
     style.remove();
     try { sessionStorage.setItem('angelicaPuzzlePlayed', '1'); } catch (_) {}
     window.removeEventListener('resize', onResize);
-    if (reducedMotion.removeEventListener) reducedMotion.removeEventListener('change', onMotionChange);
+    reducedMotion.removeEventListener?.('change', onMotionChange);
   }
 
   function tick(now) {
@@ -162,7 +197,7 @@
   function onMotionChange() { if (reducedMotion.matches) finish(); }
   skip.addEventListener('click', finish);
   window.addEventListener('resize', onResize);
-  if (reducedMotion.addEventListener) reducedMotion.addEventListener('change', onMotionChange);
+  reducedMotion.addEventListener?.('change', onMotionChange);
   running = true;
   resize();
   drawFrame(0);

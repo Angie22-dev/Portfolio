@@ -9,10 +9,10 @@
   if (document.getElementById('angelica-puzzle-overlay')) return;
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let played = false;
-  try { played = sessionStorage.getItem('angelicaPuzzlePlayed') === '1'; } catch (_) {}
-  // Nothing gets inserted for returning visitors or reduced-motion users.
-  if (played || reducedMotion.matches) return;
+  // Always replay when the homepage is loaded or refreshed.
+  // The explicit preview query is useful if an OS-level reduced-motion preference is active.
+  const testOverride = new URLSearchParams(window.location.search).get('puzzle') === 'play';
+  if (reducedMotion.matches && !testOverride) return;
 
   const style = document.createElement('style');
   style.id = 'angelica-puzzle-only-styles';
@@ -179,7 +179,6 @@
     canvas.remove();
     skip.remove();
     style.remove();
-    try { sessionStorage.setItem('angelicaPuzzlePlayed', '1'); } catch (_) {}
     window.removeEventListener('resize', onResize);
     reducedMotion.removeEventListener?.('change', onMotionChange);
   }

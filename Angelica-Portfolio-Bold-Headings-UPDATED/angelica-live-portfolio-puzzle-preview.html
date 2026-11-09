@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angelica — Puzzle Intro Over Live Portfolio (Preview)</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#190a29}
+#live-page{width:100%;height:100%;border:0;display:block}
+#preview-ribbon{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:2147483590;background:rgba(38,25,46,.92);color:white;font:600 11px Arial,sans-serif;border:1px solid #ffffff44;border-radius:100px;padding:8px 14px;max-width:calc(100vw - 32px);text-align:center;box-shadow:0 4px 20px #0003}
+</style>
+</head>
+<body>
+<iframe id="live-page" src="https://angie22-dev.github.io/Portfolio/" title="Current Angelica Singleton portfolio"></iframe>
+<div id="preview-ribbon">PREVIEW — existing live portfolio in the background; no site files changed</div>
+<script>
+/*
+ * ANGELICA SINGLETON — PUZZLE-PIECE FADE INTRO
+ * Overlay-only addition. It does not modify existing page content, layout,
+ * navigation, typography or links. Insert at start of <body>:
+ */
+(() => {
+  'use strict';
+  if (document.getElementById('angelica-puzzle-overlay')) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let played = false;
+  try { played = sessionStorage.getItem('angelicaPuzzlePlayed') === '1'; } catch (_) {}
+  // Nothing gets inserted for returning visitors or reduced-motion users.
+  if (played || reducedMotion.matches) return;
+
+  const style = document.createElement('style');
+  style.id = 'angelica-puzzle-only-styles';
+  style.textContent = `
+    #angelica-puzzle-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 2147483600 !important;
+      pointer-events: none !important;
+    }
+    #angelica-puzzle-skip {
+      position: fixed !important;
+      top: 26px !important;
+      right: clamp(18px, 4vw, 65px) !important;
+      z-index: 2147483601 !important;
+      display: block;
+      background: #26192e !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,.65) !important;
+      border-radius: 100px !important;
+      padding: 11px 18px !important;
+      font: 700 12px Inter, Arial, sans-serif !important;
+      letter-spacing: 0 !important;
+      line-height: normal !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+      text-transform: none !important;
+    }
+    #angelica-puzzle-skip:focus-visible {
+      outline: 3px solid #a76ac7 !important;
+      outline-offset: 4px !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'angelica-puzzle-overlay';
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.setAttribute('role', 'presentation');
+  const skip = document.createElement('button');
+  skip.id = 'angelica-puzzle-skip';
+  skip.type = 'button';
+  skip.textContent = 'Skip intro ↗';
+  skip.setAttribute('aria-label', 'Skip opening animation');
+  document.body.prepend(canvas, skip);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    canvas.remove(); skip.remove(); style.remove();
+    return;
+  }
+
+  let pieces = [], w = 0, h = 0, startTime = null, raf = null, running = false;
+  const DURATION_MS = 2020;
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const ease = p => p * p * (3 - 2 * p);
+  // Same deterministic fragment motion as the approved animation preview.
+  const noise = n => {
+    const v = Math.sin(n * 127.1 + 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+
+  function appendEdge(path, x0, y0, x1, y1, offset) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const at = (t, side = 0) => ({
+      x: x0 + dx * t + (dy === 0 ? 0 : side),
+      y: y0 + dy * t + (dx === 0 ? 0 : side)
+    });
+    if (!offset) { path.lineTo(x1, y1); return; }
+    const a = at(.30), b = at(.36), c = at(.35, offset), d = at(.42, offset);
+    const e = at(.47, offset * 1.25), f = at(.53, offset * 1.25), g = at(.58, offset);
+    const i = at(.65, offset), j = at(.64), k = at(.70);
+    path.lineTo(a.x, a.y);
+    path.bezierCurveTo(b.x, b.y, c.x, c.y, d.x, d.y);
+    path.bezierCurveTo(e.x, e.y, f.x, f.y, g.x, g.y);
+    path.bezierCurveTo(i.x, i.y, j.x, j.y, k.x, k.y);
+    path.lineTo(x1, y1);
+  }
+
+  function buildPieces() {
+    const cols = w < 650 ? 4 : 7, rows = w < 650 ? 7 : 5;
+    const pw = w / cols, ph = h / rows, bump = Math.min(pw, ph) * .18;
+    pieces = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const x = c * pw, y = r * ph;
+      const top = r === 0 ? 0 : ((r * 17 + c * 11) % 2 ? 1 : -1) * bump;
+      const right = c === cols - 1 ? 0 : ((r * 13 + (c + 1) * 19) % 2 ? 1 : -1) * bump;
+      const bottom = r === rows - 1 ? 0 : (((r + 1) * 17 + c * 11) % 2 ? 1 : -1) * bump;
+      const left = c === 0 ? 0 : ((r * 13 + c * 19) % 2 ? 1 : -1) * bump;
+      const path = new Path2D();
+      path.moveTo(x, y);
+      appendEdge(path, x, y, x + pw, y, top);
+      appendEdge(path, x + pw, y, x + pw, y + ph, right);
+      appendEdge(path, x + pw, y + ph, x, y + ph, bottom);
+      appendEdge(path, x, y + ph, x, y, left);
+      path.closePath();
+      const n = r * cols + c + 1;
+      pieces.push({
+        path, cx: x + pw / 2, cy: y + ph / 2,
+        delay: 480 + r * 37 + noise(n) * 125,
+        duration: 900 + noise(n + 13) * 180,
+        dx: (noise(n + 1) - .5) * (w < 650 ? 160 : 310),
+        dy: 180 + noise(n + 4) * 220 + (rows - r) * 13,
+        angle: (noise(n + 9) - .5) * 1.1
+      });
+    }
+  }
+
+  function resize() {
+    w = window.innerWidth;
+    h = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildPieces();
+  }
+
+  function drawCover() {
+    ctx.fillStyle = '#d3c5e4';
+    ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const font = Math.min(116, (w - 35) / 9.8, h * .16);
+    ctx.fillStyle = '#26192e';
+    ctx.font = `900 ${font}px Inter, Arial Black, Arial, sans-serif`;
+    const midY = h * .48;
+    ctx.fillText('ANGELICA', w / 2, midY);
+    ctx.fillText('SINGLETON', w / 2, midY + font * 1.04);
+    ctx.fillStyle = '#49385a';
+    ctx.font = `800 ${Math.min(13, Math.max(9, w / 55))}px Inter, Arial, sans-serif`;
+    ctx.fillText('DESIGN WITH CURIOSITY', w / 2, Math.min(h - 42, midY + font * 1.77));
+  }
+
+  function drawFrame(elapsed) {
+    ctx.clearRect(0, 0, w, h);
+    const seamOpacity = ease(clamp((elapsed - 175) / 300));
+    for (const piece of pieces) {
+      const p = clamp((elapsed - piece.delay) / piece.duration);
+      const motion = ease(p);
+      const alpha = 1 - ease(clamp((p - .21) / .73));
+      if (alpha <= .002) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(piece.cx + piece.dx * motion, piece.cy + piece.dy * p * p);
+      ctx.rotate(piece.angle * motion);
+      ctx.translate(-piece.cx, -piece.cy);
+      ctx.save(); ctx.clip(piece.path); drawCover(); ctx.restore();
+      ctx.strokeStyle = `rgba(40,27,54,${(seamOpacity * .24).toFixed(3)})`;
+      ctx.lineWidth = 1.15;
+      ctx.stroke(piece.path);
+      ctx.restore();
+    }
+  }
+
+  function finish() {
+    if (!running) return;
+    running = false;
+    if (raf !== null) cancelAnimationFrame(raf);
+    canvas.remove();
+    skip.remove();
+    style.remove();
+    try { sessionStorage.setItem('angelicaPuzzlePlayed', '1'); } catch (_) {}
+    window.removeEventListener('resize', onResize);
+    reducedMotion.removeEventListener?.('change', onMotionChange);
+  }
+
+  function tick(now) {
+    if (!running) return;
+    if (startTime === null) startTime = now;
+    const elapsed = now - startTime;
+    drawFrame(elapsed);
+    if (elapsed >= DURATION_MS) finish();
+    else raf = requestAnimationFrame(tick);
+  }
+
+  function onResize() { if (running) resize(); }
+  function onMotionChange() { if (reducedMotion.matches) finish(); }
+  skip.addEventListener('click', finish);
+  window.addEventListener('resize', onResize);
+  reducedMotion.addEventListener?.('change', onMotionChange);
+  running = true;
+  resize();
+  drawFrame(0);
+  raf = requestAnimationFrame(tick);
+})();
+
+</script>
+</body>
+</html>

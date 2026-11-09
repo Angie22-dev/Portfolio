@@ -1,0 +1,24 @@
+ANGELICA SINGLETON — PUZZLE INTRO INSTALLATION
+
+This keeps your existing published portfolio intact. Only the intro animation is added.
+
+1. Open https://github.com/Angie22-dev/Portfolio
+2. Select "Add file" > "Upload files".
+3. Upload puzzle-intro.js from this package to the repository ROOT (next to index.html).
+4. Commit the new file to the main branch.
+5. Open index.html in GitHub > Edit (pencil icon).
+6. Search for the exact text: </head><body>
+7. Replace ONLY that text with:
+   </head><body><script src="puzzle-intro.js"></script>
+8. Commit the edit to main.
+9. Open https://angie22-dev.github.io/Portfolio/ in a new private/incognito tab and test the intro.
+
+The intro runs once per browser tab session; a refresh in that tab skips it.
+To see it again, open a new private tab (or close/reopen the tab session).
+Users who prefer reduced motion skip the animation automatically.
+No existing portfolio styles, headings, links, cards, sections or case study files are changed.
+
+For local preview: keep angelica-live-portfolio-puzzle-preview.html and puzzle-intro.js
+in the same folder, then open the preview .html file. The portfolio in the
+background is loaded via an iframe from your live published site, so internet
+is required and browser cross-site frame settings may affect the preview.
